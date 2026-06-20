@@ -1,0 +1,17 @@
+{
+  "name": "Splice — Audio Mashup Studio",
+  "short_name": "Splice",
+  "description": "Blend two songs into one: match tempos, align beats, mix vocals and instrumentals, export as WAV or MP3.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#14130F",
+  "theme_color": "#14130F",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
