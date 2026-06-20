@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Splice — Audio Mashup Studio</title>
+<meta name="description" content="Blend two songs into one: match tempos, align beats, mix vocals and instrumentals, export as WAV or MP3.">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#14130F">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#14130F;
+  --panel:#1C1A14;
+  --panel-2:#242019;
+  --border:#3A3528;
+  --border-soft:#2A2620;
+  --amber:#E8A33D;
+  --amber-dim:#8a652b;
+  --track-a:#6FA88C;
+  --track-a-dim:#3f6356;
+  --track-b:#D1453B;
+  --track-b-dim:#7a2c26;
+  --cream:#F2EEE3;
+  --muted:#8C887A;
+  --danger:#D1453B;
+  --radius:10px;
+  --radius-lg:16px;
+  --font-display:'Big Shoulders',sans-serif;
+  --font-body:'Inter',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--cream);
+  font-family:var(--font-body);
+  -webkit-tap-highlight-color:transparent;
+  overscroll-behavior-y:none;
+}
+body::before{
+  content:"";
+  position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image:radial-gradient(circle at 1px 1px, rgba(242,238,227,0.025) 1px, transparent 0);
+  background-size:3px 3px;
+  opacity:0.6;
+}
+#app{
+  position:relative; z-index:1;
+  max-width:560px;
+  margin:0 auto;
+  padding:env(safe-area-inset-top) 16px calc(env(safe-area-inset-bottom) + 24px) 16px;
+  min-height:100vh;
+}
+header{
+  padding:22px 2px 14px 2px;
+  display:flex; align-items:baseline; justify-content:space-between;
+  border-bottom:1px solid var(--border-soft);
+  margin-bottom:18px;
+}
+.brand{display:flex; align-items:center; gap:10px;}
+.brand-mark{
+  width:26px; height:26px; border-radius:6px;
+  background:linear-gradient(135deg, var(--track-a) 0%, var(--track-a) 48%, var(--cream) 50%, var(--track-b) 52%, var(--track-b) 100%);
+  flex-shrink:0;
+}
+h1{
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:28px;
+  letter-spacing:0.5px;
+  text-transform:uppercase;
+  margin:0;
+}
+.tagline{font-size:11px; color:var(--muted); letter-spacing:0.3px;}
+#install-btn{
+  display:none;
+  font-family:var(--font-mono);
+  font-size:11px;
+  background:var(--amber);
+  color:#1a1408;
+  border:none;
+  padding:8px 12px;
+  border-radius:8px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+section.card{
+  background:var(--panel);
+  border:1px solid var(--border-soft);
+  border-radius:var(--radius-lg);
+  padding:16px;
+  margin-bottom:14px;
+}
+.section-label{
+  font-family:var(--font-mono);
+  font-size:10.5px;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin:0 0 12px 0;
+  display:flex; align-items:center; gap:8px;
+}
+.section-label .num{color:var(--amber);}
+
+.tracks-grid{display:flex; gap:10px;}
+.track-card{
+  flex:1; min-width:0;
+  background:var(--panel-2);
+  border:1px solid var(--border-soft);
+  border-radius:var(--radius);
+  padding:12px;
+  position:relative;
+}
+.track-card.track-a{border-top:3px solid var(--track-a);}
+.track-card.track-b{border-top:3px solid var(--track-b);}
+.track-name{
+  font-size:11px; font-weight:600; letter-spacing:0.5px; text-transform:uppercase;
+  color:var(--muted); margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;
+}
+.track-card.track-a .track-name .dot{background:var(--track-a);}
+.track-card.track-b .track-name .dot{background:var(--track-b);}
+.track-name .dot{width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:6px;}
+
+.dropzone{
+  border:1.5px dashed var(--border);
+  border-radius:8px;
+  padding:22px 8px;
+  text-align:center;
+  cursor:pointer;
+  transition:border-color .15s, background .15s;
+  font-size:12.5px;
+  color:var(--muted);
+}
+.dropzone:hover, .dropzone.dragover{border-color:var(--amber); background:rgba(232,163,61,0.05); color:var(--cream);}
+.dropzone input{display:none;}
+.dropzone svg{width:22px; height:22px; margin-bottom:6px; opacity:0.7;}
+
+.file-loaded{display:none;}
+.file-loaded.show{display:block;}
+.filename{
+  font-size:12.5px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  margin-bottom:6px;
+}
+canvas.mini-wave{width:100%; height:40px; display:block; border-radius:4px; background:#15130F;}
+.track-meta-row{display:flex; justify-content:space-between; align-items:center; margin-top:8px; gap:6px;}
+.bpm-field{display:flex; align-items:center; gap:5px;}
+.bpm-field label{font-size:9.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px;}
+.bpm-field input{
+  width:48px; background:var(--panel); border:1px solid var(--border); color:var(--cream);
+  font-family:var(--font-mono); font-size:12px; padding:3px 4px; border-radius:5px; text-align:center;
+}
+.replace-btn{
+  font-size:10px; color:var(--muted); background:none; border:1px solid var(--border);
+  border-radius:5px; padding:3px 7px; cursor:pointer; font-family:var(--font-body);
+}
+.replace-btn:hover{color:var(--cream); border-color:var(--muted);}
+
+.trim-row{margin-top:10px;}
+.trim-row .trim-labels{display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:10px; color:var(--muted); margin-bottom:3px;}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; width:100%; height:18px; background:transparent; margin:0;
+}
+input[type=range]::-webkit-slider-runnable-track{height:3px; background:var(--border); border-radius:2px;}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:15px; height:15px; border-radius:50%;
+  background:var(--cream); margin-top:-6px; cursor:pointer; border:2px solid var(--bg);
+}
+input[type=range]::-moz-range-track{height:3px; background:var(--border); border-radius:2px;}
+input[type=range]::-moz-range-thumb{width:15px; height:15px; border-radius:50%; background:var(--cream); border:2px solid var(--bg); cursor:pointer;}
+.track-a input[type=range]::-webkit-slider-thumb{background:var(--track-a);}
+.track-b input[type=range]::-webkit-slider-thumb{background:var(--track-b);}
+
+.dual-range{position:relative; height:18px;}
+.dual-range input[type=range]{position:absolute; top:0; left:0; pointer-events:none;}
+.dual-range input[type=range]::-webkit-slider-thumb{pointer-events:auto;}
+.dual-range input[type=range]::-moz-range-thumb{pointer-events:auto;}
+
+.tempo-mode{display:flex; gap:6px; margin-bottom:12px;}
+.tempo-mode button{
+  flex:1; background:var(--panel-2); border:1px solid var(--border-soft); color:var(--muted);
+  font-family:var(--font-body); font-size:11.5px; padding:9px 6px; border-radius:8px; cursor:pointer;
+  font-weight:500;
+}
+.tempo-mode button.active{background:var(--amber); color:#1a1408; border-color:var(--amber); font-weight:600;}
+.tempo-note{font-size:11px; color:var(--muted); line-height:1.5; margin-top:2px;}
+.progress-wrap{margin-top:10px; display:none;}
+.progress-wrap.show{display:block;}
+.progress-track{height:5px; background:var(--panel-2); border-radius:3px; overflow:hidden;}
+.progress-fill{height:100%; width:0%; background:var(--amber); transition:width .15s;}
+.progress-text{font-family:var(--font-mono); font-size:10px; color:var(--muted); margin-top:5px;}
+
+#timeline-canvas{width:100%; height:140px; display:block; border-radius:8px; background:#100F0B; touch-action:none; cursor:grab;}
+#timeline-canvas:active{cursor:grabbing;}
+.timeline-controls{display:flex; align-items:center; justify-content:space-between; margin-top:10px; gap:8px; flex-wrap:wrap;}
+.offset-readout{font-family:var(--font-mono); font-size:12px; color:var(--amber);}
+.nudge-group{display:flex; gap:5px; align-items:center;}
+.nudge-btn{
+  background:var(--panel-2); border:1px solid var(--border-soft); color:var(--cream);
+  width:30px; height:26px; border-radius:6px; cursor:pointer; font-size:13px; font-family:var(--font-mono);
+}
+.nudge-btn:active{background:var(--border);}
+.snap-toggle{display:flex; align-items:center; gap:5px; font-size:11px; color:var(--muted); cursor:pointer; user-select:none;}
+.snap-toggle input{accent-color:var(--amber); width:14px; height:14px;}
+
+.mix-row{display:flex; align-items:center; gap:12px; margin-bottom:14px;}
+.mix-row:last-child{margin-bottom:0;}
+.mix-label{width:64px; flex-shrink:0; font-size:12px; font-weight:600; display:flex; align-items:center; gap:6px;}
+.mix-label .dot{width:7px; height:7px; border-radius:50%; flex-shrink:0;}
+.mix-row.row-a .mix-label .dot{background:var(--track-a);}
+.mix-row.row-b .mix-label .dot{background:var(--track-b);}
+.mix-row input[type=range]{flex:1;}
+.mix-row.row-a input[type=range]::-webkit-slider-thumb{background:var(--track-a);}
+.mix-row.row-b input[type=range]::-webkit-slider-thumb{background:var(--track-b);}
+.vol-readout{font-family:var(--font-mono); font-size:11px; color:var(--muted); width:38px; text-align:right; flex-shrink:0;}
+.mute-solo{display:flex; gap:4px; flex-shrink:0;}
+.ms-btn{
+  width:24px; height:24px; border-radius:5px; border:1px solid var(--border-soft); background:var(--panel-2);
+  color:var(--muted); font-size:9.5px; font-weight:700; cursor:pointer; font-family:var(--font-mono);
+}
+.ms-btn.on{background:var(--amber); color:#1a1408; border-color:var(--amber);}
+
+.transport-bar{display:flex; align-items:center; gap:12px;}
+.transport-btn{
+  background:var(--panel-2); border:1px solid var(--border-soft); color:var(--cream);
+  width:44px; height:44px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+}
+.transport-btn svg{width:18px; height:18px;}
+.transport-btn.play{background:var(--amber); border-color:var(--amber); color:#1a1408;}
+.scrub-wrap{flex:1; display:flex; flex-direction:column; gap:3px;}
+.time-readout{display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:10.5px; color:var(--muted);}
+
+.export-row{display:flex; gap:10px;}
+.export-btn{
+  flex:1; padding:13px 8px; border-radius:10px; border:none; cursor:pointer;
+  font-family:var(--font-body); font-weight:600; font-size:13px; display:flex; align-items:center; justify-content:center; gap:7px;
+}
+.export-btn.wav{background:var(--track-a); color:#0e1813;}
+.export-btn.mp3{background:var(--amber); color:#1a1408;}
+.export-btn:disabled{opacity:0.4; cursor:not-allowed;}
+.bitrate-select{
+  background:var(--panel-2); border:1px solid var(--border-soft); color:var(--muted);
+  font-family:var(--font-mono); font-size:11px; border-radius:6px; padding:4px 6px; margin-left:8px;
+}
+.hint{font-size:11px; color:var(--muted); line-height:1.5; margin-top:10px;}
+.empty-hint{font-size:12.5px; color:var(--muted); text-align:center; padding:18px 6px;}
+
+footer{text-align:center; padding:18px 6px 6px; font-size:10.5px; color:var(--border); line-height:1.6;}
+
+.disabled-overlay{opacity:0.35; pointer-events:none; filter:saturate(0.6);}
+
+@media (max-width:380px){
+  .tracks-grid{flex-direction:column;}
+  h1{font-size:24px;}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div>
+        <h1>Splice</h1>
+        <div class="tagline">tempo-match · align · mix · export</div>
+      </div>
+    </div>
+    <button id="install-btn">Install</button>
+  </header>
+
+  <section class="card">
+    <p class="section-label"><span class="num">01</span> Import two tracks</p>
+    <div class="tracks-grid">
+      <div class="track-card track-a" id="track-card-a">
+        <div class="track-name"><span><span class="dot"></span>Track A</span></div>
+        <div class="dropzone" id="dropzone-a">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12m0-12 4 4m-4-4-4 4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/></svg>
+          <div>Tap or drop MP3 / WAV</div>
+          <input type="file" id="file-a" accept=".mp3,.wav,audio/mpeg,audio/wav,audio/x-wav,audio/mp3">
+        </div>
+        <div class="file-loaded" id="loaded-a">
+          <div class="filename" id="filename-a">—</div>
+          <canvas class="mini-wave" id="wave-a"></canvas>
+          <div class="track-meta-row">
+            <div class="bpm-field">
+              <label for="bpm-a">BPM</label>
+              <input type="number" id="bpm-a" min="40" max="220" step="0.1">
+            </div>
+            <button class="replace-btn" id="replace-a">Replace</button>
+          </div>
+          <div class="trim-row">
+            <div class="trim-labels"><span id="trim-a-start-label">0:00</span><span id="trim-a-end-label">0:00</span></div>
+            <div class="dual-range">
+              <input type="range" id="trim-a-start" min="0" max="1" step="0.01" value="0">
+              <input type="range" id="trim-a-end" min="0" max="1" step="0.01" value="1">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="track-card track-b" id="track-card-b">
+        <div class="track-name"><span><span class="dot"></span>Track B</span></div>
+        <div class="dropzone" id="dropzone-b">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12m0-12 4 4m-4-4-4 4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/></svg>
+          <div>Tap or drop MP3 / WAV</div>
+          <input type="file" id="file-b" accept=".mp3,.wav,audio/mpeg,audio/wav,audio/x-wav,audio/mp3">
+        </div>
+        <div class="file-loaded" id="loaded-b">
+          <div class="filename" id="filename-b">—</div>
+          <canvas class="mini-wave" id="wave-b"></canvas>
+          <div class="track-meta-row">
+            <div class="bpm-field">
+              <label for="bpm-b">BPM</label>
+              <input type="number" id="bpm-b" min="40" max="220" step="0.1">
+            </div>
+            <button class="replace-btn" id="replace-b">Replace</button>
+          </div>
+          <div class="trim-row">
+            <div class="trim-labels"><span id="trim-b-start-label">0:00</span><span id="trim-b-end-label">0:00</span></div>
+            <div class="dual-range">
+              <input type="range" id="trim-b-start" min="0" max="1" step="0.01" value="0">
+              <input type="range" id="trim-b-end" min="0" max="1" step="0.01" value="1">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="tempo-section">
+    <p class="section-label"><span class="num">02</span> Match tempo</p>
+    <div class="tempo-mode">
+      <button data-mode="off" class="active">Off</button>
+      <button data-mode="b_to_a">B → A's tempo</button>
+      <button data-mode="a_to_b">A → B's tempo</button>
+    </div>
+    <div class="tempo-note" id="tempo-note">BPM is estimated automatically — check it against the real tempo and adjust the fields above if it looks off, then pick a direction to time-stretch one track to match the other.</div>
+    <div class="progress-wrap" id="stretch-progress">
+      <div class="progress-track"><div class="progress-fill" id="stretch-progress-fill"></div></div>
+      <div class="progress-text" id="stretch-progress-text">Stretching…</div>
+    </div>
+  </section>
+
+  <section class="card" id="timeline-section">
+    <p class="section-label"><span class="num">03</span> Align the beats</p>
+    <canvas id="timeline-canvas"></canvas>
+    <div class="timeline-controls">
+      <div class="offset-readout">B starts at <span id="offset-readout">0:00.000</span></div>
+      <div class="nudge-group">
+        <button class="nudge-btn" data-nudge="-100">«</button>
+        <button class="nudge-btn" data-nudge="-10">‹</button>
+        <button class="nudge-btn" data-nudge="10">›</button>
+        <button class="nudge-btn" data-nudge="100">»</button>
+      </div>
+      <label class="snap-toggle"><input type="checkbox" id="snap-toggle"> Snap to beat</label>
+    </div>
+    <div class="hint">Drag the lower (red) waveform left or right to line up its beat or lyric with Track A. Grid lines mark beats once a tempo is set above.</div>
+  </section>
+
+  <section class="card" id="mix-section">
+    <p class="section-label"><span class="num">04</span> Mix levels</p>
+    <div class="mix-row row-a">
+      <div class="mix-label"><span class="dot"></span>Track A</div>
+      <input type="range" id="vol-a" min="0" max="150" value="100">
+      <div class="vol-readout" id="vol-a-readout">100%</div>
+      <div class="mute-solo">
+        <button class="ms-btn" id="mute-a">M</button>
+        <button class="ms-btn" id="solo-a">S</button>
+      </div>
+    </div>
+    <div class="mix-row row-b">
+      <div class="mix-label"><span class="dot"></span>Track B</div>
+      <input type="range" id="vol-b" min="0" max="150" value="100">
+      <div class="vol-readout" id="vol-b-readout">100%</div>
+      <div class="mute-solo">
+        <button class="ms-btn" id="mute-b">M</button>
+        <button class="ms-btn" id="solo-b">S</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="transport-section">
+    <p class="section-label"><span class="num">05</span> Preview</p>
+    <div class="transport-bar">
+      <button class="transport-btn play" id="play-btn">
+        <svg id="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+      <button class="transport-btn" id="stop-btn">
+        <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg>
+      </button>
+      <div class="scrub-wrap">
+        <input type="range" id="scrub" min="0" max="1" step="0.001" value="0">
+        <div class="time-readout"><span id="time-current">0:00</span><span id="time-total">0:00</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="export-section">
+    <p class="section-label"><span class="num">06</span> Export your mashup</p>
+    <div class="export-row">
+      <button class="export-btn wav" id="export-wav">Export WAV</button>
+      <button class="export-btn mp3" id="export-mp3">Export MP3<select class="bitrate-select" id="bitrate"><option value="128">128k</option><option value="192" selected>192k</option><option value="320">320k</option></select></button>
+    </div>
+    <div class="progress-wrap" id="export-progress">
+      <div class="progress-track"><div class="progress-fill" id="export-progress-fill"></div></div>
+      <div class="progress-text" id="export-progress-text">Rendering…</div>
+    </div>
+  </section>
+
+  <footer>
+    Everything runs on your device — your audio is never uploaded anywhere.<br>
+    Add Splice to your home screen for one-tap access.
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.0/lame.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
